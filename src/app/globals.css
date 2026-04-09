@@ -1,36 +1,29 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Tailwind v4 自定义主题（替代 v3 的 tailwind.config.js extend）
+   Tailwind v4 自定义主题
    ============================================================ */
 @theme {
-  /* 字体族 */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-calsans);
 
-  /* 自定义动画 */
   --animate-fade-in: fade-in 3s ease-in-out forwards;
 }
 
-/* ============================================================
-   @keyframes
-   ============================================================ */
 @keyframes fade-in {
-  0% {
-    opacity: 0;
-  }
-  75% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
+  0% { opacity: 0; }
+  75% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* ============================================================
    全局基础样式
    ============================================================ */
 body {
-  background-color: #c49a3c;
+  background-color: #e8e2d9;
+  background-image: url('/bg.jpg');
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
   color: #292524;
 }

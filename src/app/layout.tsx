@@ -46,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${calSans.variable}`}>
-      <body className="bg-[#c49a3c] antialiased">
+      <body className="antialiased">
         {children}
       </body>
     </html>
