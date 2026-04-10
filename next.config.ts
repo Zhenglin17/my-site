@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "better-flow.github.io" },
+      { protocol: "https", hostname: "dsec.ifi.uzh.ch" },
+    ],
+  },
 };
 
 export default nextConfig;

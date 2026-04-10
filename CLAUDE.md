@@ -1,37 +1,305 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件用于指导 Claude Code 在本仓库中的工作方式。
 
-## Commands
+---
 
-- `npm run dev` — start dev server (Turbopack)
-- `npm run build` — production build (also runs TypeScript checks)
-- `npm run lint` — ESLint
-- No test framework is configured
+# 一、项目目标（非常重要）
 
-## Tech Stack
+这是一个**个人网站项目（Personal Website）**，目标分为两条主线：
 
-- Next.js 16 (App Router) + React 19 + TypeScript
-- Tailwind CSS v4 (no `tailwind.config.js` — custom theme lives in `src/app/globals.css` via `@theme` blocks)
-- Framer Motion for interactive card hover effects
-- lucide-react for icons
+## 1️⃣ 求职导向（信息高效传达）
 
-## Architecture
+面向：
+- HR
+- 招聘经理
+- 快速浏览者
 
-Personal portfolio site with three routes:
+特点：
+- 简洁、直接、信息密度高
+- 类似 GitHub Pages 风格
+- 快速展示：
+  - 项目经历
+  - 技术能力
+  - 关键信息
 
-- `/` — homepage: full-screen centered title + particle canvas animation
-- `/projects` — project listing with featured card layout; data from static array in `src/app/projects/data.ts`
-- `/contact` — GitHub + Email contact cards
+👉 目标：**让别人 30 秒内了解我是谁、做过什么**
 
-### Key patterns
+---
 
-- **Fonts**: Inter (Google) + CalSans (local, `public/fonts/CalSans-SemiBold.ttf`). CSS variables `--font-inter` / `--font-calsans` injected on `<html>` in `layout.tsx`, consumed via `@theme { --font-display; --font-sans; }` in globals.css.
-- **Background**: Full-page fixed background image (`public/bg.jpg`) set in `globals.css` body styles.
-- **Client components**: Files using browser APIs or Framer Motion must have `"use client"` directive — this includes `particles.tsx`, `card.tsx`, `nav.tsx`, `contact/page.tsx`.
-- **Path alias**: `@/*` maps to `./src/*` (tsconfig paths).
-- **No external services**: No database, no CMS, no analytics. All content is static.
+## 2️⃣ 个人传记 / Timeline（有趣 + 互动）
 
-### Tailwind v4 notes
+面向：
+- 愿意深入了解我的人
+- 技术/非技术观众
 
-Tailwind v4 uses CSS-native configuration instead of `tailwind.config.js`. Custom animations, fonts, and design tokens are defined in `globals.css` under `@theme { }` and `@keyframes` blocks. Utility classes like `animate-fade-in` and `font-display` are auto-generated from these theme values.
+特点：
+- 从出生到现在的时间线（timeline）
+- 每个节点可以展开
+- 包含：
+  - 故事
+  - 图片
+  - 可能的交互效果
+- 偏“有趣 / 有表达 / 有个人风格”
+
+👉 目标：**让网站有记忆点，而不是一个普通简历站**
+
+---
+
+## ⚠️ Claude 在修改代码时必须理解：
+
+- 这是一个**“双结构网站”**（实用 + 有趣）
+- 不要把它改成纯简历站
+- 也不要把它改成纯展示型炫技网站
+- 要保持这两部分的平衡
+- 保留网站先前的大致背景和风格，除非我明确要求修改
+- 个人网站的使用语言有且只有英文，除非我明确要求哪几个文字用其他语言
+
+---
+
+# 二、技术栈
+
+- Next.js（App Router）
+- React
+- TypeScript
+- Tailwind CSS v4（通过 `globals.css` 中的 `@theme`）
+- Framer Motion（动画）
+- lucide-react（图标）
+
+👉 如需新增依赖：
+- 必须说明用途
+- 必须是“无法用现有技术栈实现”的情况
+
+---
+
+# 三、项目结构（关键）
+
+- 所有核心代码在：`src/`
+
+可能包含：
+- 页面（app router）
+- 组件（components）
+- hooks
+- utils
+- styles
+
+👉 Claude 在修改前必须：
+1. 理解当前结构
+2. 确认修改范围最小
+
+---
+
+# 四、开发命令（必须使用）
+
+- 启动开发环境：`npm run dev`
+- 构建项目：`npm run build`
+- 代码检查：`npm run lint`
+
+⚠️ 修改代码后必须保证：
+
+- `build` 不报错
+- 如报错：
+  - 说明原因
+  - 提供最小修改方案
+  - 不允许模糊解释
+
+---
+
+# 五、开发原则（非常重要）
+
+## 1️⃣ 小步修改（默认）
+
+- 不要大规模重构
+- 不要一次改很多文件
+- 优先局部修改
+
+---
+
+## 2️⃣ 修改前先理解
+
+对于中等复杂任务：
+
+👉 必须先：
+- 阅读相关文件
+- 简要说明修改思路
+
+再进行修改
+
+---
+
+## 3️⃣ 优先复用
+
+- 优先使用已有组件
+- 不随意创建重复组件
+- 保持风格一致
+
+---
+
+## 4️⃣ 不轻易引入新依赖
+
+除非：
+- 明确有必要
+- 并说明原因
+
+---
+
+## 5️⃣ UI 修改原则
+
+- 保持整体风格一致
+- 不改变核心布局结构
+- 优先“增强”，而不是“推翻重做”
+
+---
+
+## 6️⃣ 动画使用原则（非常重要）
+
+- 动画只用于：
+  - 增强体验
+  - 引导注意力
+- 不允许：
+  - 过多动画叠加
+  - 干扰信息阅读
+
+---
+
+## 7️⃣ 性能与加载原则
+
+- 首屏优先加载：
+  - 核心信息
+- 延迟加载：
+  - 图片
+  - timeline 复杂内容
+- 避免：
+  - 不必要的 re-render
+  - 大量无意义 animation
+
+---
+
+## 8️⃣ SEO / 求职可见性
+
+- 页面必须具备：
+  - 清晰标题结构（h1 / h2）
+  - 可读文本（不要全是动画）
+- 关键内容必须：
+  - 可被复制
+  - 可被搜索引擎读取
+
+---
+
+# 六、组件与代码规范
+
+## 1️⃣ 组件设计
+
+- 单一职责
+- 不要过大组件
+- 可复用优先
+
+---
+
+## 2️⃣ 状态管理
+
+- 优先：
+  - React state（useState）
+  - props
+- 避免：
+  - 不必要的全局状态
+
+---
+
+## 3️⃣ 命名规范
+
+- 语义清晰
+- 避免缩写
+- 组件使用 PascalCase
+
+---
+
+## 4️⃣ 样式规范
+
+- 优先 Tailwind
+- 不写冗余 CSS
+- 保持一致 spacing / color 风格
+
+---
+
+# 七、内容与表达规则（非常关键）
+
+这是个人网站，内容必须：
+
+- 真实（不能编造经历）
+- 完全基于我提供的信息
+- 自然（不能像营销文案）
+- 有个人风格（但不过度浮夸）
+
+---
+
+# 八、禁止行为
+
+Claude **绝对不要做以下事情**：
+
+- ❌ 编造项目经验或个人经历
+- ❌ 修改 `.env` 或敏感配置
+- ❌ 删除核心页面或结构
+- ❌ 大规模重构项目（除非明确要求）
+- ❌ 引入大量新依赖
+- ❌ 改变网站整体定位
+
+---
+
+# 九、工作方式建议
+
+## 简单任务
+👉 直接修改
+
+## 中等/复杂任务
+👉 必须：
+
+1. 分析问题
+2. 给出方案
+3. 再动代码
+
+---
+
+# 十、错误处理规范
+
+当出现错误时：
+
+必须输出：
+
+1. 错误原因（明确）
+2. 出错位置（文件 + 行为）
+3. 最小修复方案
+
+不允许：
+- 模糊解释
+- 大范围修改规避问题
+
+---
+
+# 十一、未来扩展
+
+该项目未来可能增加：
+
+- Timeline 数据结构化（JSON / CMS）
+- 更复杂交互（动画 / 3D / canvas）
+- 项目内容动态加载
+
+👉 当前修改必须：
+
+- 不阻碍未来扩展
+- 不过度设计
+- 保持结构清晰
+
+---
+
+# 十二、设计优先级
+
+当存在冲突时，优先级如下：
+
+1. 信息清晰（最重要）
+2. 可读性
+3. 结构合理
+4. 交互体验
+5. 动画效果（最低优先级）
+
+---

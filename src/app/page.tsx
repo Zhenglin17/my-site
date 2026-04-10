@@ -1,25 +1,52 @@
 import Link from "next/link";
 import Particles from "./components/particles";
 
-const navigation = [
-  { name: "Discover my life", href: "/projects" },
-  { name: "if you are a brief guy", href: "/contact" },
-];
-
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center w-screen h-screen overflow-hidden">
-      <nav className="my-16">
-        <ul className="flex items-center justify-center gap-4">
-          {navigation.map((item) => (
+      <nav className="mb-14">
+        <ul className="flex items-center justify-center gap-8">
+
+          {/* TL;DR */}
+          <li className="relative group/tldr">
             <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm duration-500 text-stone-500 hover:text-stone-800"
+              href="/tldr"
+              className="text-sm duration-300 text-stone-500 hover:text-stone-800
+                         hover:-translate-y-0.5 inline-block transition-transform"
             >
-              {item.name}
+              TL;DR
             </Link>
-          ))}
+            <div
+              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3
+                         opacity-0 group-hover/tldr:opacity-100 transition-opacity duration-200
+                         bg-stone-800 text-white text-xs rounded-lg px-3 py-2 w-44 text-center
+                         leading-snug shadow-lg whitespace-normal"
+            >
+              Short on time? This is the quick version.
+              <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-800" />
+            </div>
+          </li>
+
+          {/* Full Story */}
+          <li className="relative group/story">
+            <Link
+              href="/story"
+              className="text-sm duration-300 text-stone-500 hover:text-stone-800
+                         hover:-translate-y-0.5 inline-block transition-transform"
+            >
+              Full Story
+            </Link>
+            <div
+              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3
+                         opacity-0 group-hover/story:opacity-100 transition-opacity duration-200
+                         bg-stone-800 text-white text-xs rounded-lg px-3 py-2 w-48 text-center
+                         leading-snug shadow-lg whitespace-normal"
+            >
+              Want to see more? Discover the whole story here.
+              <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-800" />
+            </div>
+          </li>
+
         </ul>
       </nav>
 
@@ -32,11 +59,8 @@ export default function Home() {
         Zhenglin Zhang
       </h1>
 
-      <div className="my-16 text-center">
-        <h2 className="text-sm text-stone-500">
-          Software Engineer
-        </h2>
-      </div>
+      {/* Balancing spacer — mirrors nav height so name sits at true vertical center */}
+      <div className="mt-14" aria-hidden="true" />
     </div>
   );
 }
