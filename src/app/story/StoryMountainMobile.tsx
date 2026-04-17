@@ -212,13 +212,20 @@ export function StoryMountainMobile() {
               <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="turb" />
               <feDisplacementMap in="SourceGraphic" in2="turb" scale="3.5" />
             </filter>
-            {/* Asymmetric gradient — cool stone-blue on the left
-                (shadowed valley side), warm earth on the right (sunlit
-                peak side), transparent at center. */}
+            {/* Asymmetric mass gradient — deep shadow blue at the left
+                (valley base), warm earth at the right (peak base),
+                transparent at the centerline. Pushed more aggressive
+                than desktop (0.60 vs 0.34) because on mobile the
+                portrait layout has less vertical mass to read, so
+                the left-valley / right-peak semantic needs stronger
+                colour contrast to land. */}
             <linearGradient id="asymmetricMass" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={VB_W} y2="0">
-              <stop offset="0" stopColor="#5e7080" stopOpacity="0.30" />
-              <stop offset="0.5" stopColor="#fdfaf3" stopOpacity="0" />
-              <stop offset="1" stopColor="#b88860" stopOpacity="0.30" />
+              <stop offset="0"    stopColor="#2f4450" stopOpacity="0.60" />
+              <stop offset="0.22" stopColor="#5e7080" stopOpacity="0.34" />
+              <stop offset="0.45" stopColor="#fdfaf3" stopOpacity="0.05" />
+              <stop offset="0.55" stopColor="#fdfaf3" stopOpacity="0.05" />
+              <stop offset="0.78" stopColor="#b88860" stopOpacity="0.34" />
+              <stop offset="1"    stopColor="#7d4a1c" stopOpacity="0.60" />
             </linearGradient>
             <clipPath id="mountainClipMobile" clipPathUnits="userSpaceOnUse">
               <path d={massPath} fillRule="evenodd" />
