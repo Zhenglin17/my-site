@@ -12,6 +12,11 @@ import { EVENTS, MIN_AGE, MAX_AGE, type StoryEvent } from "./events";
 // A horizontal minimap sticks to the bottom of the viewport and shows the
 // whole life the "traditional" way (X=age, Y=altitude) with a scroll-synced
 // highlight band you can tap to jump.
+//
+// The ridge includes virtual endpoints at y=0 (top edge) and y=VB_H (bottom
+// edge) that both sit on the centerline, so the curve gracefully emerges
+// from and dissolves into the centerline at the top/bottom of the canvas
+// rather than cutting off at the first/last event.
 // ──────────────────────────────────────────────────────────────────────────────
 
 const VB_W = 400;                 // SVG coordinate width
@@ -19,6 +24,15 @@ const VB_H = 2600;                // SVG coordinate height — tall
 const PAD_X = 30;                 // left/right breathing room
 const PAD_Y_TOP = 48;
 const PAD_Y_BOTTOM = 48;
+
+// Receding contour echoes — copies of the ridge pulled toward centerline
+// by growing fractions with falling opacity, reading as layered ridges
+// fading into each lobe's depth (远山 motif).
+const CONTOUR_ECHOES_MOBILE = [
+  { t: 0.30, opacity: 0.26, sw: 1.3 },
+  { t: 0.55, opacity: 0.16, sw: 1.1 },
+  { t: 0.78, opacity: 0.09, sw: 0.95 },
+];
 
 const MINI_W = 1200;
 const MINI_H = 70;
@@ -102,10 +116,34 @@ export function StoryMountainMobile() {
     };
   }, []);
 
-  const mainPath = useMemo(
-    () => verticalSmoothPath(EVENTS.map((e) => ({ x: xForAltitude(e.altitude), y: yForAge(e.age) }))),
-    []
-  );
+  // Ridge points bracketed by virtual endpoints on the centerline at y=0
+  // and y=VB_H, so the curve smoothly emerges from and returns to the
+  // centerline at the top/bottom of the canvas.
+  const ridgePoints = useMemo(() => {
+    const cx = VB_W / 2;
+    const pts: { x: number; y: number }[] = [];
+    pts.push({ x: cx, y: 0 });
+    EVENTS.forEach(e => pts.push({ x: xForAltitude(e.altitude), y: yForAge(e.age) }));
+    pts.push({ x: cx, y: VB_H });
+    return pts;
+  }, []);
+  const mainPath = useMemo(() => verticalSmoothPath(ridgePoints), [ridgePoints]);
+  // Closed path: since the ridge already starts and ends on the centerline
+  // at the top and bottom of the canvas, Z alone closes the loop straight
+  // up the centerline. fillRule="evenodd" then fills each lobe.
+  const massPath = useMemo(() => `${mainPath} Z`, [mainPath]);
+  // Receding contour echoes — each ridge point pulled toward the
+  // centerline by a growing fraction. Inside each lobe the echoes read as
+  // layered ridgelines fading into depth.
+  const contourPaths = useMemo(() => {
+    const cx = VB_W / 2;
+    return CONTOUR_ECHOES_MOBILE.map(e => ({
+      ...e,
+      d: verticalSmoothPath(
+        ridgePoints.map(p => ({ x: p.x + (cx - p.x) * e.t, y: p.y }))
+      ),
+    }));
+  }, [ridgePoints]);
   const miniPath = useMemo(
     () => horizontalSmoothPath(EVENTS.map((e) => ({ x: xMini(e.age), y: yMini(e.altitude) }))),
     []
@@ -154,7 +192,7 @@ export function StoryMountainMobile() {
       <header className="px-4 pt-16 pb-5 text-center">
         <h1 className="text-xl font-display text-stone-800 mb-1">The Climb So Far</h1>
         <p className="text-[12px] text-stone-500 leading-relaxed px-4">
-          Scroll down — life flows top to bottom, peaks lean right, valleys dip left.
+          Scroll through the years — tap any marker to dive in.
         </p>
       </header>
 
@@ -174,7 +212,35 @@ export function StoryMountainMobile() {
               <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="turb" />
               <feDisplacementMap in="SourceGraphic" in2="turb" scale="3.5" />
             </filter>
+            {/* Asymmetric gradient — cool stone-blue on the left
+                (shadowed valley side), warm earth on the right (sunlit
+                peak side), transparent at center. */}
+            <linearGradient id="asymmetricMass" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={VB_W} y2="0">
+              <stop offset="0" stopColor="#5e7080" stopOpacity="0.30" />
+              <stop offset="0.5" stopColor="#fdfaf3" stopOpacity="0" />
+              <stop offset="1" stopColor="#b88860" stopOpacity="0.30" />
+            </linearGradient>
+            <clipPath id="mountainClipMobile" clipPathUnits="userSpaceOnUse">
+              <path d={massPath} fillRule="evenodd" />
+            </clipPath>
           </defs>
+
+          {/* Mass fill — asymmetric gradient tinting each lobe. */}
+          <path d={massPath} fill="url(#asymmetricMass)" fillRule="evenodd" />
+          {/* Receding contour echoes — layered ridges clipped to the
+              lobes, rough-filtered for a hand-drawn feel. */}
+          <g clipPath="url(#mountainClipMobile)" filter="url(#roughMobile)">
+            {contourPaths.map((c, i) => (
+              <path key={i}
+                d={c.d}
+                stroke="#3f3a35" strokeOpacity={c.opacity}
+                strokeWidth={c.sw}
+                fill="none"
+                strokeLinecap="round" strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </g>
 
           {/* Centerline = altitude 50 */}
           <line

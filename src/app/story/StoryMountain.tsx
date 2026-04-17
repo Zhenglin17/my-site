@@ -10,13 +10,36 @@ import { EVENTS, MIN_AGE, MAX_AGE, type StoryEvent } from "./events";
 // Main viewBox shows only VIEW_W of the FULL_W timeline; minimap at the bottom
 // renders the entire timeline plus a centered viewport window you can scrub.
 // The event closest to the main view's horizontal center gets highlighted.
+//
+// EDGE_PAD adds virtual space before the first event and after the last, so
+// when the user pans to either end the ridge keeps descending out to the
+// scroll arrow edge instead of cutting off at the first/last node.
 // ──────────────────────────────────────────────────────────────────────────────
 
-const FULL_W = 2400;                    // virtual timeline width
-const VIEW_W = 900;                     // visible window width (~38% of timeline)
+const EVENT_SPAN = 2400;                // x-range occupied by actual events
+const EDGE_PAD = 220;                   // virtual space on each side
+const FULL_W = EVENT_SPAN + EDGE_PAD * 2;
+const VIEW_W = 900;                     // visible window width
 const VIEW_H = 640;                     // main view height
 const MAIN_PAD_Y = 48;                  // top/bottom breathing room inside main view
 const MAX_PAN = FULL_W - VIEW_W;
+
+// Where the ridge meets the virtual edges. Low altitude so the range
+// visually "trails off" into the horizon rather than ending abruptly.
+const EDGE_LEAD_ALT = 8;
+const EDGE_TRAIL_ALT = 8;
+
+// Mountain body texture — instead of dense hatching, we draw a few
+// "receding ridge" echoes: copies of the main ridge path shifted downward
+// by growing amounts with decreasing opacity. Reads as layered ridgelines
+// fading into the depth of the mountain, the classical 远山 motif in
+// Chinese ink landscape painting.
+const CONTOUR_ECHOES = [
+  { dy: 52,  opacity: 0.26, sw: 1.5 },
+  { dy: 108, opacity: 0.17, sw: 1.3 },
+  { dy: 168, opacity: 0.10, sw: 1.1 },
+];
+
 const MINIMAP_H = 88;                   // minimap frame height
 // Asymmetric padding: data range is 6–96 (not 0–100), so a symmetric pad
 // leaves the peaks hugging the top edge more tightly than valleys hug bottom.
@@ -27,7 +50,7 @@ const MINIMAP_WINDOW_H = 56;            // shorter than frame so it sits centere
 const MINIMAP_WINDOW_Y = (MINIMAP_H - MINIMAP_WINDOW_H) / 2;
 
 function xFor(age: number): number {
-  return ((age - MIN_AGE) / (MAX_AGE - MIN_AGE)) * FULL_W;
+  return EDGE_PAD + ((age - MIN_AGE) / (MAX_AGE - MIN_AGE)) * EVENT_SPAN;
 }
 function yFor(altitude: number, height: number, padTop: number, padBottom: number = padTop): number {
   return (1 - altitude / 100) * (height - padTop - padBottom) + padTop;
@@ -126,17 +149,53 @@ export function StoryMountain() {
 
   useEffect(() => () => cancelTween(), []);
 
-  const mainPath = useMemo(
-    () => smoothPath(EVENTS.map(e => ({ x: xFor(e.age), y: yFor(e.altitude, VIEW_H, MAIN_PAD_Y) }))),
-    []
+  // Ridge points include two virtual endpoints (at x=0 and x=FULL_W) so
+  // the ridge descends gracefully to the scroll-arrow edges instead of
+  // cutting off at the first/last event.
+  const ridgePoints = useMemo(() => {
+    const pts: { x: number; y: number }[] = [];
+    pts.push({ x: 0, y: yFor(EDGE_LEAD_ALT, VIEW_H, MAIN_PAD_Y) });
+    EVENTS.forEach(e =>
+      pts.push({ x: xFor(e.age), y: yFor(e.altitude, VIEW_H, MAIN_PAD_Y) })
+    );
+    pts.push({ x: FULL_W, y: yFor(EDGE_TRAIL_ALT, VIEW_H, MAIN_PAD_Y) });
+    return pts;
+  }, []);
+  const mainPath = useMemo(() => smoothPath(ridgePoints), [ridgePoints]);
+  // Closed polygon: ridge on top + bottom edge → "mountain mass" silhouette,
+  // used both for the gradient fill and as the clip for contour echoes.
+  const massPath = useMemo(
+    () => `${mainPath} L ${FULL_W} ${VIEW_H} L 0 ${VIEW_H} Z`,
+    [mainPath]
   );
-  const miniPath = useMemo(
-    () => smoothPath(EVENTS.map(e => ({
-      x: xFor(e.age),
-      y: yFor(e.altitude, MINIMAP_H, MINIMAP_PAD_TOP, MINIMAP_PAD_BOTTOM),
-    }))),
-    []
-  );
+  // Receding ridge echoes — same curve shifted downward with falling
+  // opacity. Clipped to the mass silhouette so lower echoes fade against
+  // the baseline rather than cutting out into empty space.
+  const contourPaths = useMemo(() => {
+    return CONTOUR_ECHOES.map(e => ({
+      ...e,
+      d: smoothPath(ridgePoints.map(p => ({ x: p.x, y: p.y + e.dy }))),
+    }));
+  }, [ridgePoints]);
+  // Minimap ridge — same virtual-edge extension, at the minimap's scale.
+  const miniPath = useMemo(() => {
+    const pts: { x: number; y: number }[] = [];
+    pts.push({
+      x: 0,
+      y: yFor(EDGE_LEAD_ALT, MINIMAP_H, MINIMAP_PAD_TOP, MINIMAP_PAD_BOTTOM),
+    });
+    EVENTS.forEach(e =>
+      pts.push({
+        x: xFor(e.age),
+        y: yFor(e.altitude, MINIMAP_H, MINIMAP_PAD_TOP, MINIMAP_PAD_BOTTOM),
+      })
+    );
+    pts.push({
+      x: FULL_W,
+      y: yFor(EDGE_TRAIL_ALT, MINIMAP_H, MINIMAP_PAD_TOP, MINIMAP_PAD_BOTTOM),
+    });
+    return smoothPath(pts);
+  }, []);
 
   // Which event is closest to the horizontal center of the current window?
   const centerX = panX + VIEW_W / 2;
@@ -149,8 +208,16 @@ export function StoryMountain() {
     return best;
   }, [centerX]);
 
-  const ageAtLeft = MIN_AGE + (panX / FULL_W) * (MAX_AGE - MIN_AGE);
-  const ageAtRight = MIN_AGE + ((panX + VIEW_W) / FULL_W) * (MAX_AGE - MIN_AGE);
+  // Readout shows the age range currently visible, clamped to the real
+  // event span so the virtual edge padding doesn't produce negative ages.
+  const ageAtLeft = Math.max(
+    MIN_AGE,
+    Math.min(MAX_AGE, MIN_AGE + ((panX - EDGE_PAD) / EVENT_SPAN) * (MAX_AGE - MIN_AGE))
+  );
+  const ageAtRight = Math.max(
+    MIN_AGE,
+    Math.min(MAX_AGE, MIN_AGE + ((panX + VIEW_W - EDGE_PAD) / EVENT_SPAN) * (MAX_AGE - MIN_AGE))
+  );
 
   const ageTicks: number[] = [];
   for (let a = Math.ceil(MIN_AGE); a <= Math.floor(MAX_AGE); a += 2) ageTicks.push(a);
@@ -197,7 +264,35 @@ export function StoryMountain() {
                 <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="turb" />
                 <feDisplacementMap in="SourceGraphic" in2="turb" scale="4" />
               </filter>
+              {/* Vertical earthy gradient — transparent at top, warm mid,
+                  deeper at the base. Carries the light→dark weighting from
+                  ridge to foot. */}
+              <linearGradient id="mountainMass" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={VIEW_H}>
+                <stop offset="0" stopColor="#a8946d" stopOpacity="0" />
+                <stop offset="0.55" stopColor="#a8946d" stopOpacity="0.18" />
+                <stop offset="1" stopColor="#6e5f3f" stopOpacity="0.34" />
+              </linearGradient>
+              <clipPath id="mountainClip">
+                <path d={massPath} />
+              </clipPath>
             </defs>
+
+            {/* Mass fill — earthy gradient sits behind the ridge and echoes. */}
+            <path d={massPath} fill="url(#mountainMass)" />
+            {/* Receding ridge echoes — layered contours fading into depth,
+                clipped to the mass and rough-filtered for a hand-drawn feel. */}
+            <g clipPath="url(#mountainClip)" filter="url(#roughMain)">
+              {contourPaths.map((c, i) => (
+                <path key={i}
+                  d={c.d}
+                  stroke="#3f3a35" strokeOpacity={c.opacity}
+                  strokeWidth={c.sw}
+                  fill="none"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </g>
 
             {/* altitude guide lines */}
             {[20, 50, 80].map(alt => {
