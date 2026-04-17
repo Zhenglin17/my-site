@@ -3,7 +3,9 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
-export const Navigation: React.FC = () => {
+type NavProps = { backHref?: string };
+
+export const Navigation: React.FC<NavProps> = ({ backHref = "/" }) => {
 	const ref = useRef<HTMLElement>(null);
 	const [isIntersecting, setIntersecting] = useState(true);
 
@@ -26,7 +28,7 @@ export const Navigation: React.FC = () => {
 						: "bg-stone-50/90 border-stone-200"
 				}`}
 			>
-				<div className="container flex flex-row-reverse items-center justify-between p-6 mx-auto">
+				<div className="container flex flex-row-reverse items-center justify-between py-3 px-6 mx-auto">
 					<div className="flex justify-between gap-8">
 						<Link
 							href="/tldr"
@@ -43,7 +45,7 @@ export const Navigation: React.FC = () => {
 					</div>
 
 					<Link
-						href="/"
+						href={backHref}
 						className="duration-200 text-stone-500 hover:text-stone-800"
 					>
 						<ArrowLeft className="w-6 h-6" />

@@ -5,46 +5,42 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center w-screen h-screen overflow-hidden">
       <nav className="mb-14">
-        <ul className="flex items-center justify-center gap-8">
+        <ul className="flex items-start justify-center gap-12">
 
           {/* TL;DR */}
-          <li className="relative group/tldr">
+          <li>
             <Link
               href="/tldr"
-              className="text-sm duration-300 text-stone-500 hover:text-stone-800
-                         hover:-translate-y-0.5 inline-block transition-transform"
+              className="group/tldr flex flex-col items-center gap-1
+                         transition-transform duration-300 hover:-translate-y-0.5"
             >
-              TL;DR
+              <span className="text-sm text-stone-500 transition-colors duration-300
+                               group-hover/tldr:text-stone-800">
+                TL;DR
+              </span>
+              <span className="text-[11px] leading-tight text-stone-400 transition-colors duration-300
+                               group-hover/tldr:text-stone-600">
+                Short on time? Quick version.
+              </span>
             </Link>
-            <div
-              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3
-                         opacity-0 group-hover/tldr:opacity-100 transition-opacity duration-200
-                         bg-stone-800 text-white text-xs rounded-lg px-3 py-2 w-44 text-center
-                         leading-snug shadow-lg whitespace-normal"
-            >
-              Short on time? This is the quick version.
-              <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-800" />
-            </div>
           </li>
 
           {/* Full Story */}
-          <li className="relative group/story">
+          <li>
             <Link
               href="/story"
-              className="text-sm duration-300 text-stone-500 hover:text-stone-800
-                         hover:-translate-y-0.5 inline-block transition-transform"
+              className="group/story flex flex-col items-center gap-1
+                         transition-transform duration-300 hover:-translate-y-0.5"
             >
-              Full Story
+              <span className="text-sm text-stone-500 transition-colors duration-300
+                               group-hover/story:text-stone-800">
+                Full Story
+              </span>
+              <span className="text-[11px] leading-tight text-stone-400 transition-colors duration-300
+                               group-hover/story:text-stone-600">
+                Discover the whole journey.
+              </span>
             </Link>
-            <div
-              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3
-                         opacity-0 group-hover/story:opacity-100 transition-opacity duration-200
-                         bg-stone-800 text-white text-xs rounded-lg px-3 py-2 w-48 text-center
-                         leading-snug shadow-lg whitespace-normal"
-            >
-              Want to see more? Discover the whole story here.
-              <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-800" />
-            </div>
           </li>
 
         </ul>

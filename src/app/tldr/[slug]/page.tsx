@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Navigation } from "../../components/nav";
+import { ImageLightbox } from "../../components/ImageLightbox";
 import { items } from "../data";
 
 export function generateStaticParams() {
@@ -12,8 +13,9 @@ type Props = { params: Promise<{ slug: string }> };
 const LOCAL_MEDIA: Record<
   string,
   {
-    localImages?: { src: string; alt: string; label: string; caption: string }[];
-    videos?: { src: string; label: string; caption: string }[];
+    mediaLayout?: "side-by-side";
+    localImages?: { src: string; alt: string; label: string; caption: string; transform?: string }[];
+    videos?: { src: string; label: string; caption: string; scaleX?: number; maskFadeX?: number }[];
   }
 > = {
   "normal-flow": {
@@ -36,6 +38,7 @@ const LOCAL_MEDIA: Record<
     ],
   },
   "feature-matching": {
+    mediaLayout: "side-by-side",
     localImages: [
       {
         src: "/media/dsec/colmap.png",
@@ -43,6 +46,7 @@ const LOCAL_MEDIA: Record<
         label: "3D Reconstruction",
         caption:
           "3D point cloud via COLMAP — used as ground truth for supervising the keypoint matching network.",
+        transform: "scale(0.8, 1.2)",
       },
       {
         src: "/media/dsec/compare.png",
@@ -50,6 +54,7 @@ const LOCAL_MEDIA: Record<
         label: "Comparison",
         caption:
           "Single mono frame feature matching — model output vs. baseline under challenging lighting.",
+        transform: "scaleX(0.8)",
       },
       {
         src: "/media/dsec/result.png",
@@ -57,6 +62,7 @@ const LOCAL_MEDIA: Record<
         label: "Result",
         caption:
           "Qualitative matching result on DSEC event frames — keypoint correspondences overlaid on image pairs.",
+        transform: "scaleX(0.8)",
       },
     ],
     videos: [
@@ -65,16 +71,42 @@ const LOCAL_MEDIA: Record<
         label: "Background Sequence",
         caption:
           "Feature matching on a background-dominated sequence — robustness under low-motion conditions.",
+        scaleX: 1.18,
+        maskFadeX: 15,
       },
       {
         src: "/media/dsec/test.mp4",
         label: "Motion Sequence",
         caption:
           "Feature matching on a dynamic sequence — performance under motion blur and rapid scene change.",
+        maskFadeX: 15,
       },
     ],
   },
 };
+
+const maskStyleImage: React.CSSProperties = {
+  WebkitMaskImage:
+    "linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
+  maskImage:
+    "linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
+  WebkitMaskComposite: "source-in",
+  maskComposite: "intersect",
+};
+
+// fadeY=12 matches current top/bottom fade that the user confirmed looks good
+function videoMask(fadeX: number, fadeY = 12): React.CSSProperties {
+  const h = `linear-gradient(to right, transparent 0%, black ${fadeX}%, black ${100 - fadeX}%, transparent 100%)`;
+  const v = `linear-gradient(to bottom, transparent 0%, black ${fadeY}%, black ${100 - fadeY}%, transparent 100%)`;
+  return {
+    WebkitMaskImage: `${h}, ${v}`,
+    maskImage: `${h}, ${v}`,
+    WebkitMaskComposite: "source-in",
+    maskComposite: "intersect",
+  };
+}
+// Used by the default (non-side-by-side) layout
+const maskStyleVideo = videoMask(12);
 
 export default async function ExperienceDetailPage({ params }: Props) {
   const { slug } = await params;
@@ -85,7 +117,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
 
   return (
     <div>
-      <Navigation />
+      <Navigation backHref="/tldr" />
       <div className="container mx-auto px-6 pt-32 pb-20 max-w-3xl">
 
         {/* ── Header ── */}
@@ -124,84 +156,172 @@ export default async function ExperienceDetailPage({ params }: Props) {
           </ul>
         </section>
 
-        {/* ── Local images (results) — shown before videos ── */}
-        {media.localImages && media.localImages.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-6">Results</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {media.localImages.map((img) => (
-                <div key={img.src}>
-                  <p className="text-xs font-medium text-stone-500 mb-2">{img.label}</p>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.src}
-                    alt={img.alt}
-                    className="w-full h-auto rounded-md"
-                  />
-                  <p className="text-xs text-stone-400 mt-2 leading-relaxed">{img.caption}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── Side-by-side layout (images left | videos+dataset+links right) ── */}
+        {media.mediaLayout === "side-by-side" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-10">
 
-        {/* ── Videos — autoplay, loop, muted ── */}
-        {media.videos && media.videos.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-6">Demo</h2>
-            <div className={`grid gap-6 ${media.videos.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
-              {media.videos.map((v) => (
-                <div key={v.src}>
-                  <p className="text-xs font-medium text-stone-500 mb-2">{v.label}</p>
-                  <video
-                    src={v.src}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-auto rounded-md bg-stone-100"
-                  />
-                  <p className="text-xs text-stone-400 mt-2 leading-relaxed">{v.caption}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Dataset images (small, at bottom) ── */}
-        {item.images && item.images.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-4">Dataset</h2>
-            <div className="flex flex-wrap gap-6">
-              {item.images.map((img, i) => (
-                <div key={i} className="w-40 shrink-0">
-                  <div className="relative w-full aspect-video rounded-md overflow-hidden bg-stone-100">
-                    <Image src={img.src} alt={img.alt} fill
-                           className="object-contain" unoptimized />
+            {/* Left: images */}
+            {media.localImages && media.localImages.length > 0 && (
+              <div className="flex flex-col gap-6 -translate-x-4">
+                {media.localImages.map((img) => (
+                  <div key={img.src}>
+                    <div className="w-full h-40 overflow-hidden">
+                      <ImageLightbox
+                        src={img.src}
+                        alt={img.alt}
+                        thumbnailClassName="w-full h-full object-contain"
+                        thumbnailStyle={{
+                          ...maskStyleImage,
+                          ...(img.transform ? { transform: img.transform } : {}),
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-stone-400 mt-2 leading-relaxed">{img.caption}</p>
                   </div>
-                  {img.caption && (
-                    <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">{img.caption}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+                ))}
+              </div>
+            )}
 
-        {/* ── Links ── */}
-        {item.links.length > 0 && (
-          <section>
-            <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-3">Links</h2>
-            <div className="flex flex-wrap gap-3">
-              {item.links.map((link) => (
-                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer"
-                   className="text-sm text-stone-600 border border-stone-300 rounded-lg px-3 py-1.5
-                              hover:border-stone-500 hover:text-stone-900 duration-200">
-                  {link.label} ↗
-                </a>
-              ))}
+            {/* Right: videos → dataset images → links */}
+            <div className="flex flex-col gap-6">
+              {media.videos && media.videos.length > 0 && (
+                <>
+                  {media.videos.map((v) => (
+                    <div key={v.src}>
+                      <div
+                        className="w-full aspect-video overflow-hidden rounded-sm"
+                        style={videoMask(v.maskFadeX ?? 15, 8)}
+                      >
+                        <video
+                          src={v.src}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="w-full h-full object-cover bg-stone-100"
+                          style={v.scaleX ? { transform: `scaleX(${v.scaleX})` } : undefined}
+                        />
+                      </div>
+                      <p className="text-xs text-stone-400 mt-2 leading-relaxed">{v.caption}</p>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Dataset images (small, bottom-right) */}
+              {item.images && item.images.length > 0 && (
+                <div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {item.images.map((img, i) => (
+                      <div key={i}>
+                        <div className="relative w-full aspect-video rounded overflow-hidden bg-stone-100">
+                          <Image src={img.src} alt={img.alt} fill
+                                 className="object-contain" unoptimized />
+                        </div>
+                        {img.caption && (
+                          <p className="text-xs text-stone-400 mt-1 leading-relaxed">{img.caption}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Links (bottom-right, below dataset) */}
+              {item.links.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {item.links.map((link) => (
+                    <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer"
+                       className="text-sm text-stone-600 border border-stone-300 rounded-lg px-3 py-1.5
+                                  hover:border-stone-500 hover:text-stone-900 duration-200">
+                      {link.label} ↗
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
-          </section>
+          </div>
+
+        ) : (
+          <>
+            {/* ── Default layout: local images → videos → dataset → links ── */}
+
+            {media.localImages && media.localImages.length > 0 && (
+              <section className="mb-10">
+                <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-6">Results</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {media.localImages.map((img) => (
+                    <div key={img.src}>
+                      <p className="text-xs font-medium text-stone-500 mb-2">{img.label}</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img.src}
+                        alt={img.alt}
+                        className="w-full h-auto rounded-md"
+                      />
+                      <p className="text-xs text-stone-400 mt-2 leading-relaxed">{img.caption}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {media.videos && media.videos.length > 0 && (
+              <section className="mb-10">
+                <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-6">Demo</h2>
+                <div className={`grid gap-6 ${media.videos.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+                  {media.videos.map((v) => (
+                    <div key={v.src}>
+                      <p className="text-xs font-medium text-stone-500 mb-2">{v.label}</p>
+                      <video
+                        src={v.src}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-auto rounded-md bg-stone-100"
+                      />
+                      <p className="text-xs text-stone-400 mt-2 leading-relaxed">{v.caption}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {item.images && item.images.length > 0 && (
+              <section className="mb-10">
+                <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-4">Dataset</h2>
+                <div className="flex flex-wrap gap-6">
+                  {item.images.map((img, i) => (
+                    <div key={i} className="w-40 shrink-0">
+                      <div className="relative w-full aspect-video rounded-md overflow-hidden bg-stone-100">
+                        <Image src={img.src} alt={img.alt} fill
+                               className="object-contain" unoptimized />
+                      </div>
+                      {img.caption && (
+                        <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">{img.caption}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {item.links.length > 0 && (
+              <section>
+                <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-3">Links</h2>
+                <div className="flex flex-wrap gap-3">
+                  {item.links.map((link) => (
+                    <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer"
+                       className="text-sm text-stone-600 border border-stone-300 rounded-lg px-3 py-1.5
+                                  hover:border-stone-500 hover:text-stone-900 duration-200">
+                      {link.label} ↗
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
 
       </div>
